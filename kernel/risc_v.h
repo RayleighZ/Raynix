@@ -1,0 +1,26 @@
+uint64 read_mstatus();
+
+// 封装在risc_v.c的汇编函数
+void write_mstatus(uint64 status);
+void write_satp(uint satp);
+uint64 read_mhartid();
+void write_tp(uint64 id);
+uint64 read_tp();
+uint64 read_stvec();
+void write_stvec();
+uint64 read_scause();
+
+// PTE的权限
+#define PTE_V (1L << 0)
+#define PTE_R (1L << 1)
+#define PTE_W (1L << 2)
+#define PTE_X (1L << 3)
+#define PTE_U (1L << 4)
+
+// 内存对齐
+#define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
+#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
+
+typedef uint64 pde_t;
+typedef uint64 pte_t;
+typedef uint64 * pagetable_t;//包含512个PTE的pagetable
