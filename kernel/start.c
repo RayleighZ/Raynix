@@ -1,3 +1,4 @@
+#include "type.h"
 #include "risc_v.h"
 
 void start(){

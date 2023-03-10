@@ -72,10 +72,9 @@ void uart_inter(){
         if(read_uart_register(LSR) & 0x01){
             // 证明可以读取
             int res =  read_uart_register(RHR);
-            // 交给consoleintr处理，值得注意的是，这里并没有触发真正的中断
-            // 仅仅是调用了中断函数处理
+            // 剩下的交给console去handle
             // 来到此处，驱动的low side作用已经完成
-            console_intr(res);
+            consloe_input_handler(res);
         } else {
             // 已经完整读完了一次，可以终止循环
             flag == 0;

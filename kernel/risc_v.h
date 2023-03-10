@@ -1,3 +1,4 @@
+#ifndef __ASSEMBLER__
 uint64 read_mstatus();
 
 // 封装在risc_v.c的汇编函数
@@ -9,6 +10,7 @@ uint64 read_tp();
 uint64 read_stvec();
 void write_stvec();
 uint64 read_scause();
+void write_mepc(uint64 mepc);
 
 // PTE的权限
 #define PTE_V (1L << 0)
@@ -24,3 +26,5 @@ uint64 read_scause();
 typedef uint64 pde_t;
 typedef uint64 pte_t;
 typedef uint64 * pagetable_t;//包含512个PTE的pagetable
+
+#endif // __ASSEMBLER__
