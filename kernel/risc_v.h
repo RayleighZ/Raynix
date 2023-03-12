@@ -11,6 +11,7 @@ uint64 read_stvec();
 void write_stvec();
 uint64 read_scause();
 void write_mepc(uint64 mepc);
+void write_mscratch(uint64 x)
 
 // 单页物理内存大小
 #define PGSIZE 4096

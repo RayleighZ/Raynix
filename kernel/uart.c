@@ -91,6 +91,8 @@ void uart_send(){
             // THR空闲，按照FIFO的策略读出队首的char，并写入THR
             // 读出队首char
             char on_sending = t_buffer[(r_tbuffer_cursor ++) % 32];
+            // 叫醒其他在sleep的写入进程
+            // TODO: Wake up
             write_uart_register(THR, on_sending);
         }
     }

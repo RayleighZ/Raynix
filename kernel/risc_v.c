@@ -72,6 +72,16 @@ inline int check_open_interrupts(){
     return (read_sstatus & SSTATUS_SIE) != 0;
 }
 
+// 写入machine mode的scratch
+inline void write_mscratch(uint64 x){
+    asm volatile("csrw mscartch, %0" : : "r" (x));
+}
+
+// 写入时钟中断handler
+inline void write_mtvec(uint64 handler){
+    asm volatile("csrw mtvec, %0" : : "r" (handler));
+}
+
 
 // 刷新TLB
 static inline void

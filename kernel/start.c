@@ -3,6 +3,47 @@
 
 void main();
 
+// 时钟中断handler所使用的scratch
+uint64 timer_scratch[8][5];
+
+// 时钟中断handler的位置
+extern void ttraph();
+
+// 初始化时钟中断
+void timer_inter_init(){
+    // 设置时钟中断的delay时间（此处设定为十分之一秒）
+    int delay = 1000000;
+
+    // 当前core的id
+    int core_id = read_mhartid();
+
+    // mtime寄存器会随着一定频率增加而增加
+    // 当mtime大于等于mtimecmp的时候将触发时钟中断
+    // 为每一个核心单独设置mtimecmp，错开中断触发
+    uint64 mtime_since_boot = *(uint64 *)CLINT_MTIME;// 自从启动以来累计的CLINT_MTIME
+    
+    // 设置CMP，当mtime逐渐追上mtimecmp的时候，将触发时钟中断
+    // 当mtime超出最大值之后，会回旋回来，以此产生周期性中断
+    *(uint64 *)CLINT_MTIMECMP(core_id) = mtime_since_boot + delay;
+    
+    // 加载scratch[]。为timer的handler做准备
+    // 因为每一个核心都会来到此处，也就意味着只需要针对本核心的scratch数组进行初始化
+    timer_scratch[core_id][3] = CLINT_MTIMECMP(core_id);
+    timer_scratch[core_id][4] = delay;
+
+    // 写入machine mode的scratch（仅用写入自己核心的就可）
+    write_mscratch((uint64)timer_scratch[core_id]);
+
+    // 设置时钟中断handler
+    write_mtvec((uint64)ttraph);
+
+    // 开启machine mode中断
+    write_mstatus(r_mstatus() | MSTATUS_MIE);
+
+    // 开启machine mode时钟中断
+    // write_mie(read_mie() | )
+}
+
 void start(){
     // 当前hart处于machine模式（通过trap来到这里）
     // 应当在完成初始配置后回到supervisor模式，并进行后续内核启动
