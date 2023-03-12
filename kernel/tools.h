@@ -1,0 +1,1 @@
+void * set_memory(void *start, int value, uint length);

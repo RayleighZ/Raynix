@@ -1,4 +1,5 @@
-#include "types.h"
+#include "type.h"
+#include "risc_v.h"
 #include "proc.h"
 #include "def.h"
 // 进程数组（懒加载）

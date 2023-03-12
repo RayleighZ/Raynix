@@ -31,6 +31,3 @@ typedef uint64 pte_t;
 typedef uint64 * pagetable_t;//包含512个PTE的pagetable
 
 #endif // __ASSEMBLER__
-
-// 可能的最大虚拟内存地址
-#define MAXVA (1L << (9 + 9 + 9 + 12 - 1))

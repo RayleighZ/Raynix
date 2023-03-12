@@ -1,6 +1,8 @@
 #include "type.h"
 #include "risc_v.h"
 
+void main();
+
 void start(){
     // 当前hart处于machine模式（通过trap来到这里）
     // 应当在完成初始配置后回到supervisor模式，并进行后续内核启动

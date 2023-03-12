@@ -1,12 +1,19 @@
 // 执行虚拟内存加载相关
 // TODO: kalloc函数尚未完成
-#include "risc_v.h"
 #include "type.h"
+#include "risc_v.h"
 #include "memlayout.h"
 #include "def.h"
+#include "tools.h"
 
-//kernel的页表
+// kernel的页表
 pagetable_t kernel_pagetable;
+
+// 在kernel.ld中定义的内核结束位置
+extern char etext[];
+
+// trampoline.S里定义的trampoline位置
+extern char trampoline[];
 
 //根据va和pagtetable查询PTE
 pte_t * walk(pagetable_t pagetable, uint64 va){
@@ -27,7 +34,7 @@ pte_t * walk(pagetable_t pagetable, uint64 va){
             // 同时由于这就是下一级，所以可以直接赋值给pagetable
             pagetable = (pde_t*)kalloc();
             set_memory(pagetable, 0, PGSIZE);// 清零的是页表指向的内容，而非页表本身
-            *cur_pte = PA2PTE(pagetable) | PTE_V;
+            *cur_pte = (((uint64) pagetable >> 12) << 10) | PTE_V;
         }
     }
     // 这里跳出来的时候是最后一级的pagetable，跳出的目的是不对其进行kalloc操作
@@ -52,49 +59,45 @@ void map(uint64 va, uint64 pa, pagetable_t pagetable, uint64 size, uint64 permis
         // 将pa装载到当前pte中
         // 需要注意的是，我们进行的是将va的offset 0映射到pa的offset 0
         // 所以实际上是进行了size页的映射
-        *pte_cur = (((uint64) pa >> 12) << 10) | perm | PTE_V;
+        *pte_cur = (((uint64) pa >> 12) << 10) | permission | PTE_V;
         va_start += 4096;
         pa += 4096;
     }
-    return 0;
 }
 
 void fatal_pa_map(){
     // uart
-    map(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+    map(UART0, UART0, kernel_pagetable, PGSIZE, PTE_R | PTE_W);
   
     //virtio mmio disk
-    map(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+    map(VIRTIO0, VIRTIO0, kernel_pagetable, PGSIZE, PTE_R | PTE_W);
   
     // PLIC
-    map(kpgtbl, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+    map(PLIC, PLIC, kernel_pagetable, 0x400000, PTE_R | PTE_W);
   
     // kernel text
-    map(kpgtbl, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+    map(KERNBASE, KERNBASE, kernel_pagetable, (uint64)etext-KERNBASE, PTE_R | PTE_X);
   
     // map kernel data
-    map(kpgtbl, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+    map((uint64)etext, (uint64)etext, kernel_pagetable, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
   
     // trampoline, user kernel切换中断时使用
-    map(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+    map(TRAMPOLINE, (uint64)trampoline, kernel_pagetable, PGSIZE, PTE_R | PTE_X);
 }
 
 void kvm_init(){
     // 分配pagetable地址
     // 值得注意的是这本身就是一个数组
-    k_pagetable = (pagetable_t) kalloc();
+    kernel_pagetable = (pagetable_t) kalloc();
     
     // 对pagetable进行置零
-    uint64 zero = 0;
-    for(int i = 0, i < 512, i++){
-        k_pagetable = zero;
-    }
+    set_memory(kernel_pagetable, 0, PGSIZE);
 
     // 对必要的物理内存地址进行映射
     fatal_pa_map();
 
     // 为每一个进程分配kernel stack
-    init_proc_kstack(k_pagetable);
+    init_proc_kstack(kernel_pagetable);
 }
 
 // 不整合入kvm_init的原因是
@@ -103,6 +106,13 @@ void kvm_init(){
 void kvm_page_start(){
     // 开启分页内存
     // sfence_vma();
-    write_satp(k_pagetable);
+    // kernel_pagetable本身就是uint64指针
+    // 这意味着只需要将地址转换成satp寄存器想要的样子就可以了
+    // satp寄存器的60~63位标志着寻址模式，这里我们采用的是sv39
+    // 所以需要将mode设置为0x8
+    uint64 sv39_mode = (0x8l << 60);
+
+    // 剩下的部分，我们只要扬弃这个pa的12位offset，仅留下PPN写入就可
+    write_satp((((uint64)kernel_pagetable) >> 12) | sv39_mode);
     // sfence_vma();
 }
