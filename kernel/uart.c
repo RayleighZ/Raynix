@@ -24,8 +24,19 @@ unsigned char * find_uart_register(int offset){
 #define LCR 3                 
 #define LCR_EIGHT_BITS (3<<0)
 #define LSR 5                 
-#define LSR_RX_READY (1<<0)   
-#define LSR_TX_IDLE (1<<5)
+
+// 写buffer（transmit buffer）
+// 此buffer做循环队列使用
+// 自w_tbuffer_cursor % 32写入，自r_tbuffer_cusor % 32读出
+char t_buffer[32];
+// 事先约定，这里的buffer记录的均是上一个写入or读出的位置
+// 这意味着如果要进行写入，使用的应该是cursor+1
+// 如果要进行读出，使用的应该是cursor，并随后+1
+
+// 写cursor，标志着当前buffer的写入末尾位置
+uint64 w_tbuffer_cursor;
+// 读cursor, 标志着当前buffer的读取位置
+uint64 r_tbuffer_cursor;
 
 // 写入内容到指定位置的memory-mapped register
 void write_uart_register(int offset,unsigned char x){
@@ -61,7 +72,51 @@ void uart_init(){
     initlock(&uart_tx_lock, "uart");
 }
 
-int uart_get_char
+// 正式执行uart设备的发送指令
+void uart_send(){
+    // 我们将一直尝试写入，直到THR写满无法工作
+    for(;;){
+        if(w_tbuffer_cursor == r_tbuffer_cursor){
+            // 首尾衔接，证明没有什么可send的了
+            return;
+        }
+
+        // 先读取LSR的bit 5，如果为1则证明当前发送寄存器（THR）idle可以发送
+        if(read_uart_register(LSR) & (1 << 5) == 0){
+            // THR full，尚未准备好发送
+            // 值得注意的是，当UART成功完成一次发送的时候，它还会再触发一次中断
+            // 这意味这我们需要再uart_inter里面进行对send的调用
+            return;
+        } else {
+            // THR空闲，按照FIFO的策略读出队首的char，并写入THR
+            // 读出队首char
+            char on_sending = t_buffer[(r_tbuffer_cursor ++) % 32];
+            write_uart_register(THR, on_sending);
+        }
+    }
+}
+
+// uart的写入函数
+int uart_input(int c){
+    // 拿锁
+    acquire(&uart_tx_lock);
+
+    // 首先判断循环队列是否已满
+    // 循环队列满的情况自然是w等于r+32
+    // 值得注意的是，这里需要循环校验
+    // 当uart send发送出去之后，它会随机挑选一个处于sleep之中的uart_input
+    // 但是当uart_input被唤醒的时候，仍然不能完全确定其处于可以发送的状态
+    // 所以仍需进行校验
+    while(w_tbuffer_cursor == r_tbuffer_cursor + 32){
+        // 队列已满，需要等待
+        // TODO: Sleep
+    }
+
+    // 走到这里意味着可以执行写入buffer并尝试调用发送
+    t_buffer[(++w_tbuffer_cursor) % 32] = c;
+    // 调用uart_send
+    uart_send();
+}
 
 // uart中断处理
 void uart_inter(){
