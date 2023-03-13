@@ -37,11 +37,15 @@ void timer_inter_init(){
     // 设置时钟中断handler
     write_mtvec((uint64)ttraph);
 
+    // xstatus寄存器有着x模式下的全局中断使能
+    // xie寄存器则控制具体类型中断的使能（时钟中断、软中断、外部中断）
+
     // 开启machine mode中断
-    write_mstatus(r_mstatus() | MSTATUS_MIE);
+    // mie位在3 bit
+    write_mstatus(read_mie() | (1L << 3));
 
     // 开启machine mode时钟中断
-    // write_mie(read_mie() | )
+    write_mie(read_mie() | MIE_MTIE);
 }
 
 void start(){

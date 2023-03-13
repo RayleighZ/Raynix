@@ -12,6 +12,10 @@ void write_stvec();
 uint64 read_scause();
 void write_mepc(uint64 mepc);
 void write_mscratch(uint64 x)
+uint64 read_mstatus();
+void write_mstatus(uint64 x);
+uint64 read_mie();
+void write_mie(uint64 x);
 
 // 单页物理内存大小
 #define PGSIZE 4096
@@ -22,6 +26,12 @@ void write_mscratch(uint64 x)
 #define PTE_W (1L << 2)
 #define PTE_X (1L << 3)
 #define PTE_U (1L << 4)
+
+// machine mode的中断使能
+// 写入mie寄存器
+#define MIE_MEIE (1L << 11)
+#define MIE_MTIE (1L << 7) 
+#define MIE_MSIE (1L << 3) 
 
 // 内存对齐
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))

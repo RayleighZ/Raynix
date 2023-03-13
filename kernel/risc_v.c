@@ -82,6 +82,29 @@ inline void write_mtvec(uint64 handler){
     asm volatile("csrw mtvec, %0" : : "r" (handler));
 }
 
+// 读写Machine Status Register
+// 控制Machine mode的整体中断使能
+inline uint64 read_mstatus(){
+    uint64 result;
+    asm volatile("csrr %0, mstatus" : "=r" (result));
+    return result;
+}
+
+inline void write_mstatus(uint64 x){
+    asm volatile("csrw mstatus, %0" : : "r" (x));
+}
+
+// 读写mie寄存器
+// 控制具体类型的中断使能
+inline uint64 read_mie(){
+    uint64 result;
+    asm volatile("csrr %0, mie" : "=r" (result));
+    return result;
+}
+
+inline void write_mie(uint64 x){
+    asm volatile("csrw mie, %0" : : "r" (x));
+}
 
 // 刷新TLB
 static inline void
