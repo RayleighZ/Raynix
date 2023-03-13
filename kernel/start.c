@@ -56,7 +56,7 @@ void start(){
     // 以便在machine模式从trap中返回时可以正确处于supervisor mode
     unsigned long mstatus = read_mstatus();
     mstatus &= !(3L << 11);//将mstatus的11 12位MPP清零
-    mstatus += 1L << 11;//将上一个状态设置为supervisor
+    mstatus |= (1L << 11);//将上一个状态设置为supervisor
 
     write_mstatus(mstatus);
 

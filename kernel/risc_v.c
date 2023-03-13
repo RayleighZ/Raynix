@@ -106,6 +106,18 @@ inline void write_mie(uint64 x){
     asm volatile("csrw mie, %0" : : "r" (x));
 }
 
+// 读写sstatus寄存器
+// 控制supervisor mode的整体中断使能
+inline uint64 read_sstatus(){
+    uint64 result;
+    asm volatile("csrr %0, sstatus" : "=r" (result));
+    return result;
+}
+
+inline void write_sstatus(uint64 x){
+    asm volatile("csrw sstatus, %0" : : "r" (x));
+}
+
 // 刷新TLB
 static inline void
 sfence_vma()

@@ -33,6 +33,9 @@ void write_mie(uint64 x);
 #define MIE_MTIE (1L << 7) 
 #define MIE_MSIE (1L << 3) 
 
+// supervisor mode的中断使能
+
+
 // 内存对齐
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
 #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
