@@ -12,18 +12,18 @@ unsigned char * find_uart_register(int offset){
 
 // UART 16550a的寄存器位置定义
 // 寄存器定义参考http://byterunner.com/16550.html
-#define RHR 0                 
-#define THR 0                 
-#define IER 1                 
+#define RHR 0
+#define THR 0
+#define IER 1
 #define IER_RX_ENABLE (1<<0)
 #define IER_TX_ENABLE (1<<1)
-#define FCR 2                 
+#define FCR 2
 #define FCR_FIFO_ENABLE (1<<0)
-#define FCR_FIFO_CLEAR (3<<1) 
-#define ISR 2                 
-#define LCR 3                 
+#define FCR_FIFO_CLEAR (3<<1)
+#define ISR 2
+#define LCR 3
 #define LCR_EIGHT_BITS (3<<0)
-#define LSR 5                 
+#define LSR 5
 
 // 写buffer（transmit buffer）
 // 此buffer做循环队列使用
@@ -37,6 +37,9 @@ char t_buffer[32];
 uint64 w_tbuffer_cursor;
 // 读cursor, 标志着当前buffer的读取位置
 uint64 r_tbuffer_cursor;
+
+// 写入锁
+struct spinlock uart_tx_lock;
 
 // 写入内容到指定位置的memory-mapped register
 void write_uart_register(int offset,unsigned char x){
@@ -69,7 +72,7 @@ void uart_init(){
     write_uart_register(IER, IER_TX_ENABLE | IER_RX_ENABLE);
 
     // 初始化锁
-    initlock(&uart_tx_lock, "uart");
+    reset_lock(&uart_tx_lock);
 }
 
 // 正式执行uart设备的发送指令
@@ -118,6 +121,7 @@ int uart_input(int c){
     t_buffer[(++w_tbuffer_cursor) % 32] = c;
     // 调用uart_send
     uart_send();
+    release(&uart_tx_lock);
 }
 
 // uart中断处理
@@ -137,4 +141,12 @@ void uart_inter(){
             flag == 0;
         }
     }
+
+    // 当uart_putc发送成功之后
+    // 同样也会触发中断，并最终执行uart_inter
+    // 意图是发送新的字符，故这里我们仍然需要再调用一次send
+    // 大不了没有可发送的就立刻return了
+    acquire(&uart_tx_lock);
+    uart_send();
+    release(&uart_tx_lock);
 }
