@@ -55,8 +55,8 @@ void start(){
     // 将mstatus寄存器中trap来源的权限状态设置为supervisor
     // 以便在machine模式从trap中返回时可以正确处于supervisor mode
     unsigned long mstatus = read_mstatus();
-    mstatus &= !(3L << 11);//将mstatus的11 12位MPP清零
-    mstatus |= (1L << 11);//将上一个状态设置为supervisor
+    mstatus &= ~(3L << 11); //将mstatus的11 12位MPP清零
+    mstatus |= (1L << 11); //将上一个状态(也就是前面清零的MPP位)设置为supervisor
 
     write_mstatus(mstatus);
 
@@ -67,10 +67,12 @@ void start(){
     // 暂不开启分页寻址
     write_satp(0);
 
+    // 开启时钟中断
+    timer_inter_init();
+
     // 将cpuid写入线程指针，以便在回到supervisor_mode之后依然可以访问到
     write_tp(read_mhartid());
     
     // 从machine_mode执行trap回归，根据前文定义，将以supervisor模式执行main.c的main函数
     asm volatile("mret");
-
 }

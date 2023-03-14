@@ -16,3 +16,4 @@ void init_proc_kstack(pagetable_t pgt);
 void acquire(struct spinlock * lock);
 void release(struct spinlock * lock);
 void reset_lock(struct spinlock * lock);
+void spinlock_init();
