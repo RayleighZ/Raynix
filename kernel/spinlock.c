@@ -1,5 +1,8 @@
 // spin锁，如果没拿到锁就不断循环直到可以拿到
+#include "types.h"
 #include "spinlock.h"
+#include "memlayout.h"
+#include "risc_v.h"
 
 // 因为一个进程中可能持有多把锁
 // 而我们需要在第一把锁被acquire的时候就禁用中断
@@ -17,6 +20,11 @@ void spinlock_init(){
         lock_layers[i] = 0;
         off_from_start[i] = 0;
     }
+}
+
+// 初始化锁，主要目的是将是否available设置为1
+void reset_lock(struct spinlock *lock){
+    lock -> available = 1;
 }
 
 void push_inter_off(){
@@ -51,12 +59,13 @@ void pop_inter_off(){
     }
 }
 
+// 索要lock
 void acquire(struct spinlock * lock){
 
     // 尽量不要在使用锁的期间引入中断
     // 在中断中如果用不同顺序acquire了锁，就有可能导致死锁
     // 出于以上考量，在acquire之后就禁用这个core的中断
-    write_sstatus(read_sstatus() | ~SSTATUS_SIE);
+    push_inter_off();
 
     // 因两个core可能同时发现lock可用而同时介入
     // 所以lock是否available的校验需要保证原子性
@@ -70,4 +79,14 @@ void acquire(struct spinlock * lock){
 
     // 执行到此处时，lock的available虽然还是0，但已经变成过一次1了
     // 值得注意的是，为了保证原子性，一定不可写作while(flag){ flag = check }的形式
+}
+
+// 释放lock
+void release(struct spinlock * lock){
+
+    // 将available写入此锁中
+    __sync_lock_test_and_set(&(lock->available), 1);
+
+    // 重新开启中断
+    pop_inter_off();
 }
