@@ -60,9 +60,14 @@ struct context {
     uint64 s11;
 }
 
+static int RUNNING = 0;
+static int RUNNABLE = 1;
+
 struct proc{
     struct trapframe * tf; // trapframe，中断时存储寄存器用
     struct context context; // 进程调度时缓存寄存器用
+    struct spinlock lock;
+    int state; // 当前process的运行状态
 };
 
 // cpu的定义
