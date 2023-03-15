@@ -3,23 +3,20 @@
 #include "spinlock.h"
 #include "memlayout.h"
 #include "risc_v.h"
+#include "proc.h"
 
 // 因为一个进程中可能持有多把锁
 // 而我们需要在第一把锁被acquire的时候就禁用中断
 // 直到最后一把锁被release，才能重新开启中断
-// 于是需要维护一个“中断acquire计数器”来实现上述目标
-// 同时，还需要维持一个是否在acquire之前就已经设置为中断关闭的数组
+// 于是需要维护一个“中断acquire计数器”来实现上述目标（cpu->lock_layer）
+// 同时，还需记录是否在acquire之前就已经设置为中断关闭（cpu->interrupt_disabled）
 // 在acquire之前就已经将中断关闭，则就算锁层归零也不应该开启中断
-
-int lock_layers[8]; // 锁的层数
-int off_from_start[8]; // 一开始是否就关闭了中断
 
 // 目的是初始化计数器
 void spinlock_init(){
-    for(int i = 0; i < 8; i ++){
-        lock_layers[i] = 0;
-        off_from_start[i] = 0;
-    }
+    // for(int i = 0; i < 8; i ++){
+        // cpus(i).;
+    // }
 }
 
 // 初始化锁，主要目的是将是否available设置为1
@@ -30,29 +27,29 @@ void reset_lock(struct spinlock *lock){
 void push_inter_off(){
 
     int id = read_tp();
-    int layer = lock_layers[id];
+    int layer = cpus[id].lock_layer;
     if((read_sstatus() & SSTATUS_SIE == 0) || layer == 0){
         // 标志着本来就没有开启中断
         // 所以将标志位设置为1
         // 将来即使层数归零，也不应该开启中断
-        off_from_start[id] = 1;
+        cpus[id].interrupt_disabled = 1;
     } else {
         // 当然，如果不是，就要恢复为0
-        off_from_start[id] = 0;
+        cpus[id].interrupt_disabled = 0;
     }
     if(layer == 0){
         // 仅在第一次上锁
         write_sstatus(read_sstatus() | ~SSTATUS_SIE);
     }
     layer ++;
-    lock_layers[id] = layer;
+    cpus[id].lock_layer = layer;
 }
 
 void pop_inter_off(){
     int id = read_tp();
-    lock_layers[id] --;
-    int layer = lock_layers[id];
-    if(layer == 0 && off_from_start[id] == 0){
+    cpus[id].lock_layer --;
+    int layer = cpus[id].lock_layer;
+    if(layer == 0 && cpus[id].interrupt_disabled == 0){
         // 所有的锁已经清除，并且在一开始就没有启动中断
         // 可以重新开启中断
         write_sstatus(read_sstatus() | SSTATUS_SIE);
