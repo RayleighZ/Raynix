@@ -4,6 +4,7 @@ uint64 read_mstatus();
 // 封装在risc_v.c的汇编函数
 void write_mstatus(uint64 status);
 void write_satp(uint satp);
+uint64 read_satp();
 uint64 read_mhartid();
 void write_tp(uint64 id);
 uint64 read_tp();
@@ -16,6 +17,8 @@ uint64 read_mstatus();
 void write_mstatus(uint64 x);
 uint64 read_mie();
 void write_mie(uint64 x);
+void write_sepc(uint64 x);
+uint64 read_sepc();
 
 // 单页物理内存大小
 #define PGSIZE 4096
@@ -34,7 +37,11 @@ void write_mie(uint64 x);
 #define MIE_MSIE (1L << 3) 
 
 // supervisor mode的中断使能
-
+#define SSTATUS_SPP (1L << 8)
+#define SSTATUS_SPIE (1L << 5)
+#define SSTATUS_UPIE (1L << 4)
+#define SSTATUS_SIE (1L << 1)
+#define SSTATUS_UIE (1L << 0)
 
 // 内存对齐
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))

@@ -14,9 +14,15 @@ inline void write_mepc(uint64 mepc){
     asm volatile("csrw mepc, %0" : : "r" (mepc));
 }
 
-// 写satp寄存器（控制是否分页寻址）
+// 读写satp寄存器（分页寻址page的位置）
 inline void write_satp(uint64 satp){
     asm volatile("csrw satp, %0" : : "r" (satp));
+}
+
+inline uint64 read_satp(){
+    uint64 result;
+    asm volatile("csrr %0, satp" : "=r" (result));
+    return result;
 }
 
 // 写入TrapHandler的位置
@@ -119,8 +125,18 @@ inline void write_sstatus(uint64 x){
 }
 
 // 刷新TLB
-static inline void
-sfence_vma()
+inline void sfence_vma()
 {
     asm volatile("sfence.vma zero, zero");
+}
+
+// 读写中断异常pc寄存器
+inline void write_sepc(uint64 x){
+    asm volatile("csrw sepc, %0" : : "r" (x));
+}
+
+inline uint64 read_sepc(){
+    uint64 result;
+    asm volatile("csrr %0, sepc" : "=r" (result));
+    return result;
 }
