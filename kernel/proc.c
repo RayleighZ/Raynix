@@ -19,6 +19,19 @@ void init_proc_kstack(pagetable_t pgt){
     }
 }
 
+// 在获取当前cpu的proc时如果触发了时钟中断
+// 则将引起当前cpu的proc变化，使得先前获取的proc不再正确
+// 所以这里需要进行一次封装，在获取proc前后禁用中断
+// 并且更加合理的做法应该是向拿锁一样，push以及pop中断
+// 原因与spinlock处相同
+struct * cpu cur_proc(){
+    push_inter_off();
+    int id = read_tp();
+    struct proc * p = cpus[id] -> cur_proc;
+    pop_inter_off();
+    return p;
+}
+
 // 每一个cpu都应该有一个kernel thread运行此
 // 用于找到下一个可以切换时间片的process
 void scheduler(){
@@ -54,7 +67,7 @@ void enter_sched(){
     // 如果持有锁然后放弃cpu将可能导致其他程序长时间拿不到锁
     // 因此在放弃之前需要校验锁的层数是否为1（cpu持有p->lock是可接受的）
     struct cpu c = cpus[read_tp()];
-    struct proc * p = c -> cur_proc;
+    struct proc * p = cur_proc();
     if(c -> lock_layer == 1){
         // 是否开启中断操纵的是cpu，但本质上其实是process的属性
         // 如果我们开启swtch，当再回来的时候，cpu->interrupt_disabled其实已经被另一个进程刷新
@@ -72,11 +85,15 @@ void enter_sched(){
 // 让当前进程放手，切入到scheduler
 void give_up(){
     // 拿锁，这个锁会在scheduler之中解开
-    struct proc * p = cpus[read_tp()] -> cur_proc;
+    struct proc * p = cur_proc();
     acquire(&p->lock);
     // 因为被放弃了，就设置状态为可运行（但尚未运行）
     p -> state = RUNNABLE;
     enter_sched();
     // 解锁，这里的锁是在scheduler之中加上的
     release(&p->lock);
+
+    // 上文中这种交叉式的锁的使用保证了对其中一个cpu对proc寄存器的使用都是单独的
+    // 不会导致多核跑在同一个proc信息（特别是stack）上的窘境
+    // 可以保证在swtch前后，一直有对proc的保护
 }

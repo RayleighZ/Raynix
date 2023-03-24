@@ -36,6 +36,7 @@ void kernel_trap(){
         switch (type){
             case TIMER_INTER : {
                 // 时钟中断
+                // 直接yield
                 break;
             }
             case EXTERNAL_INTER : {

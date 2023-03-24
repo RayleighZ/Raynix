@@ -17,3 +17,5 @@ void acquire(struct spinlock * lock);
 void release(struct spinlock * lock);
 void reset_lock(struct spinlock * lock);
 void spinlock_init();
+void pop_inter_off();
+void push_inter_off();

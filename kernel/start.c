@@ -71,6 +71,7 @@ void start(){
     timer_inter_init();
 
     // 将cpuid写入线程指针，以便在回到supervisor_mode之后依然可以访问到
+    // hartid只可以在machine_mode中读取，故需要缓存
     write_tp(read_mhartid());
     
     // 从machine_mode执行trap回归，根据前文定义，将以supervisor模式执行main.c的main函数

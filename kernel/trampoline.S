@@ -62,12 +62,13 @@ uservec:
         # initialize kernel stack pointer, from p->trapframe->kernel_sp
         ld sp, 8(a0)
 
-        # make tp hold the current hartid, from p->trapframe->kernel_hartid
+        # 加载缓存的tp，因为用户态的进程可能更改了tp，导致tp并不指向hartid
+        # 所以当进入内核的时候就将restore在usertrapret中缓存的tp
+        # 保证当进入内核的时候，tp的值是hartid
         ld tp, 32(a0)
 
         # load the address of usertrap(), from p->trapframe->kernel_trap
         ld t0, 16(a0)
-
 
         # fetch the kernel page table address, from p->trapframe->kernel_satp.
         ld t1, 0(a0)
@@ -131,7 +132,7 @@ userret:
         ld t5, 272(a0)
         ld t6, 280(a0)
 
-	    # restore user a0
+	# restore user a0
         ld a0, 112(a0)
         
         # return to user mode and user pc.
