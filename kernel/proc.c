@@ -19,6 +19,9 @@ void init_proc_kstack(pagetable_t pgt){
     }
 }
 
+struc sleeping_chain chains[64];
+struc sleeping_chain chains_cursor[64]; 
+
 // 在获取当前cpu的proc时如果触发了时钟中断
 // 则将引起当前cpu的proc变化，使得先前获取的proc不再正确
 // 所以这里需要进行一次封装，在获取proc前后禁用中断
@@ -96,4 +99,29 @@ void give_up(){
     // 上文中这种交叉式的锁的使用保证了对其中一个cpu对proc寄存器的使用都是单独的
     // 不会导致多核跑在同一个proc信息（特别是stack）上的窘境
     // 可以保证在swtch前后，一直有对proc的保护
+}
+
+
+void wakeup()
+
+// 让当前进程yield，直到其他进程将其wake up
+void sleep(int channel, struct spinlock * lock){
+    // 获取当前进程
+    struct proc * p = cur_proc();
+    // 先要获取p->lock，因为这里在修改进程状态
+    acquire(&p->lock);
+    // 修改p的状态
+    p -> state = SLEEPING;
+    p -> channel = channel;
+    chains[channel]
+    // 在进入调度器之前需要release lock，防止死锁
+    release(lock);
+    enter_sched();
+
+    // 执行到这里时，意味着当前进程已经
+    // 放弃p->lock，理由同give_up
+    release(p->lock);
+    // 重新获得lock，因为sleep往往涉及一些整体状态的修改
+    // 调用sleep的进程应该希望在sleep之后lock还在
+    acquire(lock);
 }
