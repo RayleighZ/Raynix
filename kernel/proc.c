@@ -11,16 +11,13 @@ struct proc procs[64];
 void init_proc_kstack(pagetable_t pgt){
     for(int i = 0; i < 64; i++){
         // 为KSTACK分配一页内存
-        char * pa = kalloc();
+        char * pa = kalloc(); 
         // KSTACK的位置在trampoline之下，间隔一个proc安置一次
         int offset = int (&proc[i] - proc);
         uint64 va = KSTACK(offset);
         map(pgt, va, (uint64)pa, 4096, PTE_R | PTE_W);
     }
 }
-
-struc sleeping_chain chains[64];
-struc sleeping_chain chains_cursor[64]; 
 
 // 在获取当前cpu的proc时如果触发了时钟中断
 // 则将引起当前cpu的proc变化，使得先前获取的proc不再正确
@@ -101,8 +98,28 @@ void give_up(){
     // 可以保证在swtch前后，一直有对proc的保护
 }
 
+void channel_push(int channel, struct proc * process){
+    struct sleeping_chain head = chains[channel];
+    head -> process;
+}
 
-void wakeup()
+void wakeup(int channel){
+    struct proc cursor;
+    for(int i = 0; i < 64; i ++){
+        cursor = procs[i];
+        if(cursor != cur_proc()){
+            // 获取p的lock，尝试修改状态
+            acquire(cursor -> lock);
+            if(cursor -> channel == channel 
+            && cursor -> state == SLEEPING){
+                // 修改状态将其激活
+                // 因为存在schedule机制，可以认为修改到runnable之后立刻就会被执行
+                cursor -> state = RUNNABLE;
+            }
+            release(cursor -> lock);
+        }
+    }
+}
 
 // 让当前进程yield，直到其他进程将其wake up
 void sleep(int channel, struct spinlock * lock){
@@ -120,6 +137,8 @@ void sleep(int channel, struct spinlock * lock){
 
     // 执行到这里时，意味着当前进程已经
     // 放弃p->lock，理由同give_up
+    // 同时需要清理sleeping channel
+    p -> channel = 0;
     release(p->lock);
     // 重新获得lock，因为sleep往往涉及一些整体状态的修改
     // 调用sleep的进程应该希望在sleep之后lock还在
