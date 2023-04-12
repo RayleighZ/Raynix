@@ -24,7 +24,7 @@ void init_proc_kstack(pagetable_t pgt){
 // 所以这里需要进行一次封装，在获取proc前后禁用中断
 // 并且更加合理的做法应该是向拿锁一样，push以及pop中断
 // 原因与spinlock处相同
-struct * cpu cur_proc(){
+struct * proc cur_proc(){
     push_inter_off();
     int id = read_tp();
     struct proc * p = cpus[id] -> cur_proc;
