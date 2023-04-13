@@ -41,6 +41,16 @@ pte_t * walk(pagetable_t pagetable, uint64 va){
     return &pagetable[(va >> 12) & mask_index];
 }
 
+// va转译pa
+uint64 find_pa(pagetable_t pagetable, uint64 va){
+    // 找到va对映的pte
+    pte_t * pte = walk(pagetable, va);
+    // 利用pte和offset查询pa
+    uint64 offset_mask = 0xFFF;
+    uint64 pa = ((((uint64) * pte) >> 10) << 12 | (va & offset_mask));
+    return pa;
+}
+
 // va: 虚拟内存地址 pa: 物理内存地址 pagetable 映射中va对应的PTE的根pagetable
 // size: 对va往后的多少页虚拟内存进行映射 permission: PTE所具备的权限
 // 将va映射为pa，并且将其后size page的内存地址进行顺序映射
@@ -83,6 +93,15 @@ void fatal_pa_map(){
   
     // trampoline, user kernel切换中断时使用
     map(TRAMPOLINE, (uint64)trampoline, kernel_pagetable, PGSIZE, PTE_R | PTE_X);
+}
+
+// 将pagetable中addr虚拟内存之后len位拷贝进入target之中
+// 用于将user的pagetable的内容cv进入kernel中处理
+void copy_in(pagetable_t pagetable, char * target, uint64 addr, uint64 len){
+    // 先拿到物理内存地址
+    uint64 va_start = PGROUNDDOWN(addr);
+    uint64 pa_star = find_pa(pagetable, va_start);
+    memmove(target, (void *)(pa_star), len);
 }
 
 void kvm_init(){

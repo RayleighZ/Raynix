@@ -36,7 +36,6 @@ void pipe_write(struct pipe * pi, uint64 start_addr, int len){
         } else {
             // buffer尚未满载，写入buffer就可
             pi -> write_cursor ++;
-
             cur_proc = cur_proc();
             // 从user空间中读取内容进入char cur
             copy_in(cur_proc -> pagetable, & cur, start_addr + i, 1); // TODO: Copy in 待实现
