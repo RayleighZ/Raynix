@@ -12,13 +12,14 @@ uint64 read_stvec();
 void write_stvec();
 uint64 read_scause();
 void write_mepc(uint64 mepc);
-void write_mscratch(uint64 x)
+void write_mscratch(uint64 x);
 uint64 read_mstatus();
 void write_mstatus(uint64 x);
 uint64 read_mie();
 void write_mie(uint64 x);
 void write_sepc(uint64 x);
 uint64 read_sepc();
+void write_mtvec(uint64 handler);
 
 // 单页物理内存大小
 #define PGSIZE 4096
@@ -44,10 +45,9 @@ uint64 read_sepc();
 #define SSTATUS_UIE (1L << 0)
 
 // 内存对齐
-#define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
+#define PGROUNDUP(sz) (((sz)+PGSIZE-1) & ~(PGSIZE-1))
 #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
 
-typedef uint64 pde_t;
 typedef uint64 pte_t;
 typedef uint64 * pagetable_t;//包含512个PTE的pagetable
 

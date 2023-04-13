@@ -1,4 +1,5 @@
 #include "type.h"
+#include "memlayout.h"
 #include "risc_v.h"
 
 void main();

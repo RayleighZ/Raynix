@@ -1,3 +1,5 @@
+struct spinlock;
+
 // kalloc.c
 void * kalloc();
 void kalloc_init();

@@ -32,7 +32,7 @@ pte_t * walk(pagetable_t pagetable, uint64 va){
         } else {
             // 新建一个pagetable，并将其物理地址赋值给PTE
             // 同时由于这就是下一级，所以可以直接赋值给pagetable
-            pagetable = (pde_t*)kalloc();
+            pagetable = (pte_t*)kalloc();
             set_memory(pagetable, 0, PGSIZE);// 清零的是页表指向的内容，而非页表本身
             *cur_pte = (((uint64) pagetable >> 12) << 10) | PTE_V;
         }
@@ -105,9 +105,9 @@ void copy_in(pagetable_t pagetable, char * target, uint64 addr, uint64 len){
 }
 
 // 同上，将source写入到target之中
-void copy_out(pagetable_t pagetable_t, uint64 target, char * source, uint64 len){
-    uint64 pa_star = find_pa(pagetable, addr);
-    memmove(source, (void *)target, len);
+void copy_out(pagetable_t pagetable, uint64 target, char * source, uint64 len){
+    uint64 pa_star = find_pa(pagetable, target);
+    memmove(source, (void *)pa_star, len);
 }
 
 void kvm_init(){
