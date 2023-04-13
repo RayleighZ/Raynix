@@ -99,9 +99,15 @@ void fatal_pa_map(){
 // 用于将user的pagetable的内容cv进入kernel中处理
 void copy_in(pagetable_t pagetable, char * target, uint64 addr, uint64 len){
     // 先拿到物理内存地址
-    uint64 va_start = PGROUNDDOWN(addr);
-    uint64 pa_star = find_pa(pagetable, va_start);
+    // 这里转换为pa的原因是：在kernel中内存几乎是直接映射
+    uint64 pa_star = find_pa(pagetable, addr);
     memmove(target, (void *)(pa_star), len);
+}
+
+// 同上，将source写入到target之中
+void copy_out(pagetable_t pagetable_t, uint64 target, char * source, uint64 len){
+    uint64 pa_star = find_pa(pagetable, addr);
+    memmove(source, (void *)target, len);
 }
 
 void kvm_init(){
