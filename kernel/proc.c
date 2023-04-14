@@ -1,5 +1,7 @@
 #include "type.h"
 #include "risc_v.h"
+#include "spinlock.h"
+#include "memlayout.h"
 #include "proc.h"
 #include "def.h"
 // 进程数组（懒加载）
@@ -13,9 +15,9 @@ void init_proc_kstack(pagetable_t pgt){
         // 为KSTACK分配一页内存
         char * pa = kalloc(); 
         // KSTACK的位置在trampoline之下，间隔一个proc安置一次
-        int offset = int (&proc[i] - proc);
+        int offset = (int) (&procs[i] - procs);
         uint64 va = KSTACK(offset);
-        map(pgt, va, (uint64)pa, 4096, PTE_R | PTE_W);
+        map(va, (uint64)pa, pgt, 4096, PTE_R | PTE_W);
     }
 }
 
@@ -24,10 +26,10 @@ void init_proc_kstack(pagetable_t pgt){
 // 所以这里需要进行一次封装，在获取proc前后禁用中断
 // 并且更加合理的做法应该是向拿锁一样，push以及pop中断
 // 原因与spinlock处相同
-struct * proc cur_proc(){
+struct proc * cur_proc(){
     push_inter_off();
     int id = read_tp();
-    struct proc * p = cpus[id] -> cur_proc;
+    struct proc * p = cpus[id].cur_proc;
     pop_inter_off();
     return p;
 }
@@ -36,28 +38,28 @@ struct * proc cur_proc(){
 // 用于找到下一个可以切换时间片的process
 void scheduler(){
 
-    struct cpu * c = cpus[read_tp()];
+    struct cpu c = cpus[read_tp()];
     struct proc * cusor;
-    c -> cur_proc = 0;
+    c.cur_proc = 0;
     for(;;){
         // 循环查找所有的process中runnable的
-        for(int i = 0; i < 64, i++){
+        for(int i = 0; i < 64; i++){
             cusor = &procs[i];
             // 校验是否runnable
-            acquire(cusor -> lock);
+            acquire(& cusor -> lock);
             if(cusor -> state == RUNNABLE){
                 // 尝试拿锁
                 // 拿到之后就意味着可以切换了
                 // 但是需要先更新当前cpu的状态
                 cusor -> state = RUNNING;
-                c -> cur_proc = cusor;
-                swtch(c -> context, cusor -> context);
+                c.cur_proc = cusor;
+                swtch(& c.context, & cusor -> context);
 
                 // 如果再回到这里，意味着cursor被yield了
                 // 当前cpu不再有正在run的proc，故cur_proc需要清零
-                c -> cur_proc = 0;
+                c.cur_proc = 0;
             }
-            release(cusor -> lock);
+            release(& cusor -> lock);
         }
     }
 }
@@ -68,14 +70,14 @@ void enter_sched(){
     // 因此在放弃之前需要校验锁的层数是否为1（cpu持有p->lock是可接受的）
     struct cpu c = cpus[read_tp()];
     struct proc * p = cur_proc();
-    if(c -> lock_layer == 1){
+    if(c.lock_layer == 1){
         // 是否开启中断操纵的是cpu，但本质上其实是process的属性
         // 如果我们开启swtch，当再回来的时候，cpu->interrupt_disabled其实已经被另一个进程刷新
         // 所以需要缓存当前process的interrupt_disabled状态
         // 当下次swtch回来的时候再恢复缓存
-        int disabled = c -> interrupt_disabled;
-        swtch(p -> context, c -> context);
-        c -> interrupt_disabled = disabled;
+        int disabled = c.interrupt_disabled;
+        swtch(& p -> context, & c.context);
+        c.interrupt_disabled = disabled;
     } else {
         // TODO: panic
     }
@@ -98,31 +100,26 @@ void give_up(){
     // 可以保证在swtch前后，一直有对proc的保护
 }
 
-void channel_push(int channel, struct proc * process){
-    struct sleeping_chain head = chains[channel];
-    head -> process;
-}
-
-void wakeup(int channel){
+void wakeup(void * channel){
     struct proc cursor;
     for(int i = 0; i < 64; i ++){
         cursor = procs[i];
-        if(cursor != cur_proc()){
+        if(& cursor != cur_proc()){
             // 获取p的lock，尝试修改状态
-            acquire(cursor -> lock);
-            if(cursor -> channel == channel 
-            && cursor -> state == SLEEPING){
+            acquire(& cursor. lock);
+            if(cursor.channel == channel 
+            && cursor.state == SLEEPING){
                 // 修改状态将其激活
                 // 因为存在schedule机制，可以认为修改到runnable之后立刻就会被执行
-                cursor -> state = RUNNABLE;
+                cursor.state = RUNNABLE;
             }
-            release(cursor -> lock);
+            release(& cursor.lock);
         }
     }
 }
 
 // 让当前进程yield，直到其他进程将其wake up
-void sleep(int channel, struct spinlock * lock){
+void sleep(void * channel, struct spinlock * lock){
     // 获取当前进程
     struct proc * p = cur_proc();
     // 先要获取p->lock，因为这里在修改进程状态
@@ -130,7 +127,6 @@ void sleep(int channel, struct spinlock * lock){
     // 修改p的状态
     p -> state = SLEEPING;
     p -> channel = channel;
-    chains[channel]
     // 在进入调度器之前需要release lock，防止死锁
     release(lock);
     enter_sched();
@@ -139,7 +135,7 @@ void sleep(int channel, struct spinlock * lock){
     // 放弃p->lock，理由同give_up
     // 同时需要清理sleeping channel
     p -> channel = 0;
-    release(p->lock);
+    release(& p->lock);
     // 重新获得lock，因为sleep往往涉及一些整体状态的修改
     // 调用sleep的进程应该希望在sleep之后lock还在
     acquire(lock);

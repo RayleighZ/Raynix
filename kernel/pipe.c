@@ -1,8 +1,7 @@
 #include "type.h"
 #include "risc_v.h"
-#include "proc.h"
 #include "def.h"
-#include "spinlock.c"
+#include "proc.h"
 
 #define PIPESIZE = 512
 

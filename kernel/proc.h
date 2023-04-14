@@ -58,28 +58,27 @@ struct context {
     uint64 s9;
     uint64 s10;
     uint64 s11;
-}
+};
 
-static int RUNNING = 0;
-static int RUNNABLE = 1;
-
-struct proc{
+struct proc {
     struct trapframe * tf; // trapframe，中断时存储寄存器用
-    struct context context; // 进程调度时缓存寄存器用
+    struct context context; // 当前proc的context（区分于cpu中缓存的sheduler的context）
     struct spinlock lock;
     int state; // 当前process的运行状态
     pagetable_t pagetable;
-    int context; // 保存scheduler的context，在proc.c的scheduler中被加载
-    int lock_layer; // 当前加的锁的层数，用于在spinlock中判断是否需要开中断
+    void * channel; // 如果正在sleep，则标识其处于的channel
 };
 
+enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+
 // cpu的定义
-struct cpu{
+struct cpu {
     // 是否开启中断
     // 在spinlock中用于校验是否需要在lock层数清零之后开启中断
     int interrupt_disabled;
     struct proc * cur_proc; // 当前执行的proc
-    
-}
+    struct context context; // 保存scheduler的context，在proc.c的scheduler中被加载
+    int lock_layer; // 当前加的锁的层数，用于在spinlock中判断是否需要开中断
+};
 
 extern struct cpu cpus[8];

@@ -4,6 +4,7 @@
 #include "memlayout.h"
 #include "risc_v.h"
 #include "proc.h"
+#include "defs.h"
 
 // 因为一个进程中可能持有多把锁
 // 而我们需要在第一把锁被acquire的时候就禁用中断
