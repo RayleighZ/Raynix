@@ -141,3 +141,14 @@ void kvm_page_start(){
     write_satp((((uint64)kernel_pagetable) >> 12) | sv39_mode);
     // sfence_vma();
 }
+
+// 生成一页空的页表
+pagetable_t empty_vm_create(){
+    // 申请一页页表
+    pagetable_t pagetable;
+    pagetable = (pagetable_t) kalloc();
+
+    // 请空页表
+    set_memory(pagetable, 0, PGSIZE);
+    return pagetable;
+}

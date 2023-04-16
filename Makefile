@@ -8,7 +8,6 @@ OBJS = \
   $K/main.o \
   $K/vm.o \
   $K/proc.o \
-  $K/type.o \
 
 # RISC-V ubuntu下的交叉编译工具
 RISC-COMPLIER = riscv64-unknown-elf-
