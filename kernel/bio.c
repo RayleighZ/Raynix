@@ -32,14 +32,18 @@ void binit(){
     spinlock_init(& cache.lock);
 
     // 初始化双向链表
-    struct buf cursor;
-    cache.head = buffers[0];
-    cursor = cache.head;
+    struct buf * cursor;
+    cursor = & buffers[0];
+    cache.head -> next = cursor;
+    cursor -> prior = cache;
+    sleeplock_init(& cursor -> splk);
     for(int i = 1; i < 30; i ++){
         cursor -> next = & buffers[i];
-        buffers.prior = & cursor;
-        cursor = buffers[i];
+        buffers[i].prior = cursor;
         // 为每一个buf加载一份sleeplock
-
+        sleeplock_init(& cursor -> splk);
+        cursor = & buffers[i];
     }
+    cursor -> next = & cache.head;
+    cache.head -> prior = cursor;
 }
