@@ -1,4 +1,4 @@
-#include "types.h"
+#include "type.h"
 
 // 工具方法合集
 void * set_memory(void *start, int value, uint length){

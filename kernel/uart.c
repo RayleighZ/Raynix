@@ -1,6 +1,6 @@
 // UART 16550a的驱动
 
-#include "types.h"
+#include "type.h"
 #include "memlayout.h"
 #include "spinlock.h"
 #include "def.h"

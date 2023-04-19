@@ -1,5 +1,5 @@
 // spin锁，如果没拿到锁就不断循环直到可以拿到
-#include "types.h"
+#include "type.h"
 #include "spinlock.h"
 #include "memlayout.h"
 #include "risc_v.h"
