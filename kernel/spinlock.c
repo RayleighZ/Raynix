@@ -13,15 +13,8 @@
 // 同时，还需记录是否在acquire之前就已经设置为中断关闭（cpu->interrupt_disabled）
 // 在acquire之前就已经将中断关闭，则就算锁层归零也不应该开启中断
 
-// 目的是初始化计数器
-void spinlock_init(){
-    // for(int i = 0; i < 8; i ++){
-        // cpus(i).;
-    // }
-}
-
 // 初始化锁，主要目的是将是否available设置为1
-void reset_lock(struct spinlock *lock){
+void spinlock_init(struct spinlock *lock){
     lock -> available = 1;
 }
 

@@ -38,3 +38,8 @@ void release_sleep(struct sleeplock * sllk){
     wakeup(sllk);
     release(& sllk -> splk);
 }
+
+void sleeplock_init(struct sleeplock * sllk){
+    spinlock_init(sllk -> splk);
+    sllk -> holding = 0;
+}

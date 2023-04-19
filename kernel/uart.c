@@ -72,7 +72,7 @@ void uart_init(){
     write_uart_register(IER, IER_TX_ENABLE | IER_RX_ENABLE);
 
     // 初始化锁
-    reset_lock(&uart_tx_lock);
+    spinlock_init(&uart_tx_lock);
 }
 
 // 正式执行uart设备的发送指令
